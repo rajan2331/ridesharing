@@ -2,21 +2,22 @@ package com.ride.model;
 
 public class Coordinates {
 
-	private String xAxis;
-	private String yAxis;
-	
-	public String getxAxis() {
-		return xAxis;
-	}
-	public void setxAxis(String xAxis) {
+	private Double xAxis;
+	public Coordinates(Double xAxis, Double yAxis) {
+		super();
 		this.xAxis = xAxis;
-	}
-	public String getyAxis() {
-		return yAxis;
-	}
-	public void setyAxis(String yAxis) {
 		this.yAxis = yAxis;
 	}
+
+	private Double yAxis;
+
+	public Double getxAxis() {
+		return xAxis;
+	}
+	public Double getyAxis() {
+		return yAxis;
+	}
+
 	
-	
+
 }
