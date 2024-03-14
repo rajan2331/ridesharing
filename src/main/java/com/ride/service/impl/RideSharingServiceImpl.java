@@ -5,11 +5,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.springframework.stereotype.Service;
 
 import com.ride.model.Coordinates;
+import com.ride.model.Driver;
+import com.ride.model.Rider;
 import com.ride.model.Rides;
 import com.ride.service.RideSharingService;
 import com.ride.util.Constants;
@@ -18,10 +19,9 @@ import com.ride.util.RideShareUtil;
 @Service
 public class RideSharingServiceImpl implements RideSharingService{
 
-	HashMap<String,Coordinates> drivers = new HashMap();
-	HashMap<String,Coordinates> riders = new HashMap();
+	List<Driver> drivers = new ArrayList();
+	List<Rider> riders = new ArrayList();
 	HashMap<String,String> matched = new HashMap();
-	List<String> ridesStarted = new ArrayList();
 	List<String> ridesStopped = new ArrayList();
 	HashMap<String,Rides> rides = new LinkedHashMap();
 	HashMap<String,String> riderRideMapping = new HashMap();
@@ -30,28 +30,31 @@ public class RideSharingServiceImpl implements RideSharingService{
 	@Override
 	public void addDriver(String addDriver) {
 		String[] driverArr = addDriver.split(Constants.space);
-		drivers.putIfAbsent(driverArr[Constants.int_one], new Coordinates(Double.valueOf(driverArr[Constants.int_two]),Double.valueOf(driverArr[Constants.int_three])));
+		drivers.add(new Driver(driverArr[Constants.int_one], Double.valueOf(driverArr[Constants.int_two]),Double.valueOf(driverArr[Constants.int_three])));
 	}
 
 	@Override
 	public void addRider(String addRider) {
 		String[] riderArr = addRider.split(Constants.space);
-		riders.putIfAbsent(riderArr[Constants.int_one], new Coordinates(Double.valueOf(riderArr[Constants.int_two]),Double.valueOf(riderArr[Constants.int_three])));
+		riders.add(new Rider(riderArr[Constants.int_one], Double.valueOf(riderArr[Constants.int_two]),Double.valueOf(riderArr[Constants.int_three])));
 	}
 
 	@Override
 	public String match(String match) {	
 		String[] matchArr = match.split(Constants.space);
 		String riderId = matchArr[Constants.int_one];
-		Coordinates rider = riders.get(riderId);
+		Rider rider = riders.stream()
+				  .filter(riders -> riderId.equals(riders.getRiderId()))
+				  .findAny()
+				  .orElse(null);
 		HashMap<String,Double> matchedDrivers = new HashMap();
 		// calculating distance
-		for(Entry<String,Coordinates> entry : drivers.entrySet())
+		for(Driver driver : drivers)
 		{	  
-		    double result = RideShareUtil.calculateDistance(entry.getValue().getxAxis(), entry.getValue().getyAxis(), 
+		    double result = RideShareUtil.calculateDistance(driver.getxAxis(), driver.getyAxis(), 
 		    		rider.getxAxis(), rider.getyAxis());
 		    if(result<=Constants.nearesDistance)
-		    	matchedDrivers.putIfAbsent(entry.getKey(), result);
+		    	matchedDrivers.putIfAbsent(driver.getDriverId(), result);
 		}
 		// This is done to sort the map by nearest distance to rider
 		Map<String,Double> sortedMap = RideShareUtil.sortByValue(matchedDrivers);
@@ -65,10 +68,9 @@ public class RideSharingServiceImpl implements RideSharingService{
 	public String startRide(String startRide) {
 		String[] rideArr = startRide.split(Constants.space);
 		String rideId = rideArr[Constants.int_one];
-		if(ridesStarted.contains(rideId))
+		if(riderRideMapping.containsKey(rideId))
 			return "INVALID_RIDE";
-		else
-			ridesStarted.add(rideId);
+		
 		Integer n = Integer.valueOf(rideArr[Constants.int_two]);
 		String rider = rideArr[Constants.int_three];
 		String drivers  = matched.get(rider);
@@ -103,9 +105,12 @@ public class RideSharingServiceImpl implements RideSharingService{
 		String rideId= billArr[Constants.int_one];
 		Rides ride = rides.get(rideId);
 		Coordinates rideCoord= ride.getCoordinates();
-		Coordinates riderCoord = riders.get(riderRideMapping.get(rideId));
+		Rider riderCoord = riders.stream()
+		  .filter(riders -> riderRideMapping.get(rideId).equals(riders.getRiderId()))
+		  .findAny()
+		  .orElse(null);
 		double result =  RideShareUtil.calculateDistance(rideCoord.getxAxis(), rideCoord.getyAxis(), riderCoord.getxAxis(), riderCoord.getyAxis());
-		double amount= RideShareUtil.calculateBill( result, Double.valueOf(ride.getTimeTaken()));
+		double amount= 	RideShareUtil.calculateBill( result, Double.valueOf(ride.getTimeTaken()));
 	  	return "BILL " + rideId +Constants.space+ driverRideMapping.get(rideId)+Constants.space+amount;
 	}
 
